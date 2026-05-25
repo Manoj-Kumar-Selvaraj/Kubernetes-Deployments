@@ -1,0 +1,80 @@
+#!/bin/bash
+set -euxo pipefail
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y ca-certificates curl python3 software-properties-common
+add-apt-repository --yes --update universe
+apt-get install -y ansible
+
+mkdir -p /opt/k3s-init
+chmod 0755 /opt/k3s-init
+
+cat >/opt/k3s-init/install-k3s.yml <<'PLAYBOOK'
+---
+- name: Install single-node k3s during EC2 boot
+  hosts: localhost
+  connection: local
+  become: true
+  gather_facts: true
+
+  vars:
+    k3s_install_script_url: https://get.k3s.io
+    k3s_server_args:
+      - --write-kubeconfig-mode
+      - "644"
+      - --disable
+      - traefik
+
+  tasks:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Check if k3s is already installed
+      ansible.builtin.stat:
+        path: /usr/local/bin/k3s
+      register: k3s_binary
+
+    - name: Download k3s installer
+      ansible.builtin.get_url:
+        url: "{{ k3s_install_script_url }}"
+        dest: /tmp/install-k3s.sh
+        mode: "0755"
+      when: not k3s_binary.stat.exists
+
+    - name: Install k3s from configured release channel
+      ansible.builtin.command:
+        cmd: "/tmp/install-k3s.sh {{ k3s_server_args | join(' ') }}"
+      environment:
+        INSTALL_K3S_CHANNEL: ${k3s_install_channel}
+      when: not k3s_binary.stat.exists
+
+    - name: Ensure k3s service is enabled and running
+      ansible.builtin.systemd:
+        name: k3s
+        enabled: true
+        state: started
+
+    - name: Wait for Kubernetes API to be ready
+      ansible.builtin.command: kubectl get nodes
+      register: kubectl_nodes
+      changed_when: false
+      retries: 20
+      delay: 6
+      until: kubectl_nodes.rc == 0
+
+    - name: Persist k3s verification output
+      ansible.builtin.copy:
+        dest: /opt/k3s-init/k3s-node-status.txt
+        content: "{{ kubectl_nodes.stdout }}\n"
+        mode: "0644"
+PLAYBOOK
+
+ansible-playbook -i "localhost," /opt/k3s-init/install-k3s.yml \
+  > /var/log/k3s-ansible-init.log 2>&1

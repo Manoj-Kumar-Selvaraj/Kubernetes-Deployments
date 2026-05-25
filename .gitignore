@@ -1,0 +1,9 @@
+*.pem
+k3s-node-key
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
