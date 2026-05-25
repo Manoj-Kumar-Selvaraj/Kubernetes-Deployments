@@ -8,6 +8,11 @@ output "key_pair_name" {
   value       = aws_key_pair.k3s_node.key_name
 }
 
+output "key_pair_fingerprint" {
+  description = "AWS key pair fingerprint for the registered SSH public key"
+  value       = aws_key_pair.k3s_node.fingerprint
+}
+
 output "ssh_command" {
   description = "SSH command for connecting to the k3s node"
   value       = "ssh -i ./k3s-node-key ubuntu@${aws_eip.k3s_node.public_ip}"

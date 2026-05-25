@@ -160,6 +160,7 @@ resource "aws_instance" "k3s_node_instance" {
 
   user_data = templatefile("${path.module}/templates/k3s-ansible-init.sh.tftpl", {
     k3s_install_channel = var.k3s_install_channel
+    ssh_public_key      = var.ssh_public_key
   })
 
   tags = {
