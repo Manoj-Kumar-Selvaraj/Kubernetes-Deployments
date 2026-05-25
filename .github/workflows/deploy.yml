@@ -1,0 +1,32 @@
+name: Deploy Hello World Nginx
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "k8s/**"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show cluster nodes
+        run: sudo kubectl get nodes -o wide
+
+      - name: Apply Kubernetes manifests
+        run: sudo kubectl apply -f k8s/
+
+      - name: Wait for deployment rollout
+        run: sudo kubectl rollout status deployment/hello-world-nginx -n hello-world --timeout=180s
+
+      - name: Show deployed resources
+        run: |
+          sudo kubectl get pods,svc -n hello-world -o wide
+          curl --fail --retry 10 --retry-delay 3 http://127.0.0.1:30080

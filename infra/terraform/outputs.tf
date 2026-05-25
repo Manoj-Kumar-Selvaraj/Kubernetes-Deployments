@@ -15,10 +15,15 @@ output "key_pair_fingerprint" {
 
 output "ssh_command" {
   description = "SSH command for connecting to the k3s node"
-  value       = "ssh -i ./k3s-node-key ubuntu@${aws_eip.k3s_node.public_ip}"
+  value       = "ssh -i <PRIVATE_KEY_PATH> ubuntu@${aws_eip.k3s_node.public_ip}"
 }
 
 output "k3s_boot_log_command" {
   description = "Command to inspect the boot-time Ansible k3s installation log"
-  value       = "ssh -i ./k3s-node-key ubuntu@${aws_eip.k3s_node.public_ip} 'sudo tail -n 80 /var/log/k3s-ansible-init.log'"
+  value       = "ssh -i <PRIVATE_KEY_PATH> ubuntu@${aws_eip.k3s_node.public_ip} 'sudo tail -n 80 /var/log/k3s-ansible-init.log'"
+}
+
+output "hello_world_url" {
+  description = "Public URL for the Hello World Nginx service after the manifest is deployed"
+  value       = "http://${aws_eip.k3s_node.public_ip}:30080"
 }
